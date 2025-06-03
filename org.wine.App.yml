@@ -1,8 +1,11 @@
 id: org.wine.App
-branch: '10.7'
+# branch: testing                    # Set branch for testing purposes (Default branch is master)
 sdk: org.wine.Sdk
 runtime: org.wine.Platform
 runtime-version: '10.7'
+# rename-desktop-file: App.desktop # Not needed because desktop file is already named com.wine.App
+# rename-icon: App                 # Not needed because icons are already named com.wine.App
+command: App.sh
 finish-args:
   - --allow=multiarch                                      # Access to 32bit libraries (For running 32bit executables)
   # - --allow=devel                                          # Uses full SDK as the runtime (Access to more debugging tools and other libs)
@@ -20,10 +23,10 @@ finish-args:
   # - --system-talk-name=org.freedesktop.NetworkManager      # Can manage network directly
   # - --filesystem=host:ro                                   # Read access to common host directories
   - --filesystem=xdg-run/app/com.discordapp.Discord:create # Read/write access to Discord's running instance (Required for setting up Discord rich presence)
+  # - --filesystem=xdg-run/discord-ipc-0:create              # Read/Write access to Discord's IPC socket (Required for setting up Discord rich presence)
   - --filesystem=xdg-run/gamescope-0:ro                    # Read access to Gamescope's running instance (Required for Gamescope on Steam Deck)
   # - --env=WINEARCH=win32                                   # Set Wine to 32bit mode (64bit mode is default)
   - --env=WINEPREFIX=/var/data/wine                        # Set prefix location
-
 inherit-extensions:
   - org.freedesktop.Platform.Compat.i386       # 32bit Linux compatibility
   - org.freedesktop.Platform.Compat.i386.Debug # 32bit Linux compatibility debug
@@ -34,9 +37,6 @@ inherit-extensions:
   - org.freedesktop.Platform.VAAPI.Intel.i386  # 32bit Intel VAAPI
   - org.freedesktop.Platform.ffmpeg-full       # FFmpeg
   - org.freedesktop.Platform.ffmpeg_full.i386  # 32bit FFmpeg
-
-cleanup-commands:
-
 modules:
   # Setting up required stuff
   - name: Setup
@@ -52,22 +52,82 @@ modules:
         mkdir -p ${FLATPAK_DEST}/lib/i386-linux-gnu/dri/intel-vaapi-driver # 32bit Intel VAAPI
         mkdir -p ${FLATPAK_DEST}/lib/ffmpeg                                # FFmpeg
         mkdir -p ${FLATPAK_DEST}/lib32/ffmpeg                              # 32bit FFmpeg
+        mkdir -p ${FLATPAK_DEST}/extensions
+
+        mkdir -p ${FLATPAK_DEST}/bin                                                                               # Make directory needed for binaries
+        mkdir -p ${FLATPAK_DEST}/share/applications/                                                               # Make directory for desktop files
+        mkdir -p ${FLATPAK_DEST}/share/icons/hicolor/{16x16,24x24,32x32,48x48,64x64,128x128,256x256,scalable}/apps # Make directories needed for icons
 
   - name: App
     sources:
-      - type: file
-        path: Executables/winetest.exe
+      # # NOTE: These executables are already downloaded alongside this manifest
+      # # Executable that tests the 32bit capabilities of the installed Wine (org.wine.Sdk)
+      # - type: file
+      #   path: Executables/winetest.exe
+      # # Executable that tests the 64bit capabilities of the installed Wine (org.wine.Sdk)
+      # - type: file
+      #   path: Executables/winetest64.exe
 
-      - type: file
-        path: Executables/winetest64.exe
+      # # NOTE: These executables are downloaded when Flatpak builder is ran on this file
+      # # Executable that tests the 32bit capabilities of the installed Wine (org.wine.Sdk)
+      # - type: file
+      #   url: https://gitlab.winehq.org/wine/wine/-/jobs/161893/artifacts/raw/winetest.exe
+      #   sha256: 7955d7e783806063fb4c263dc7a1394236141980f7c96a3110baa24b12f541f4          # Hash that is used to confirm the correct file was downloaded
+      # # Executable that tests the 64bit capabilities of the installed Wine (org.wine.Sdk)
+      # - type: file
+      #   url: https://gitlab.winehq.org/wine/wine/-/jobs/161893/artifacts/raw/winetest64.exe
+      #   sha256: f7eb761d69a294ec4f9f8bf1142731a9a189a638cf047f822846effd9754ba1b            # Hash that is used to confirm the correct file was downloaded
 
+      # NOTE: These executables are downloaded when the user installs this Flatpak, and are not included in the Flatpak when it is built. This is necessary to avoid redistributing copyrighted materials or very large files
+      # Executable that tests the 32bit capabilities of the installed Wine (org.wine.Sdk) (Downloaded to /app/extra when user is installing because of extra-data)
+      - type: extra-data
+        url: https://gitlab.winehq.org/wine/wine/-/jobs/161893/artifacts/raw/winetest.exe
+        sha256: 7955d7e783806063fb4c263dc7a1394236141980f7c96a3110baa24b12f541f4          # Hash that is used to confirm the correct file was downloaded
+        size: 71634800                                                                    # Size of executable (Found with "wc --bytes < winetest.exe")
+        filename: winetest.exe
+      # Executable that tests the 64bit capabilities of the installed Wine (org.wine.Sdk) (Downloaded to /app/extra when user is installing because of extra-data)
+      - type: extra-data
+        url: https://gitlab.winehq.org/wine/wine/-/jobs/161893/artifacts/raw/winetest64.exe
+        sha256: f7eb761d69a294ec4f9f8bf1142731a9a189a638cf047f822846effd9754ba1b            # Hash that is used to confirm the correct file was downloaded
+        size: 69053414                                                                      # Size of executable (Found with "wc --bytes < winetest64.exe")
+        filename: winetest64.exe
+      # Script that is automatically ran when user is installing, after extra-data is downloaded
+      - type: script
+        dest-filename: apply_extra # This specific name is needed
+        commands:
+          - |
+            # NOTE: ${FLATPAK_DEST} is not available here because this is ran after the Flatpak is built, while the user is installing
+            install -Dm744 winetest.exe -t /app/extra/bin   # Install winetest.exe
+            install -Dm744 winetest64.exe -t /app/extra/bin # Install winetest64.exe
+
+      # Windows registry file that can be used to set needed registry keys of a Wine prefix
+      - type: file
+        path: Registry/WineGraphics.reg
+      # Script that will act as the launch command when the Flatpak starts (Specified above with the command option)
+      - type: file
+        path: Scripts/App.sh
+      # Scalable icon that will show up in user's App menus, on taskbars, and in storefronts
+      - type: file
+        path: Icons/org.wine.App.svg
+      # Desktop file that will be installed below, then exported by Flatpak and appear in user's App menus
+      - type: file
+        path: DesktopEntries/org.wine.App.desktop
+      # Metadata file about this Flatpak that determines things like the version, and is used by storefronts
       - type: file
         path: org.wine.App.metainfo.xml
-
-    buildsystem: simple
+    buildsystem: simple # Uses the series of bash commands specified below to build
     build-commands:
       - |
-        install -Dm744 winetest.exe -t /app/bin
-        install -Dm744 winetest64.exe -t /app/bin
-        install -Dm644 org.wine.App.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
+        # NOTE: -Dm744 installs with execute permission, while -Dm644 does not
+        # NOTE: ${FLATPAK_DEST} maps to /app here, because this is an app
+        # install -Dm744 winetest.exe -t ${FLATPAK_DEST}/bin                                    # Install winetest.exe
+        # install -Dm744 winetest64.exe -t ${FLATPAK_DEST}/bin                                  # Install winetest64.exe
+        ln -s ${FLATPAK_DEST}/extra/bin/winetest.exe ${FLATPAK_DEST}/bin/winetest.exe         # Symlink to winetest.exe that will be downloaded with extra-data when user installs and installed with apply_extra in /app/extra/bin
+        ln -s ${FLATPAK_DEST}/extra//binwinetest64.exe ${FLATPAK_DEST}/bin/winetest64.exe     # Symlink to winetest64.exe that will be downloaded with extra-data when user installs and installed with apply_extra in /app/extra/bin
+        install -Dm744 apply_extra -t ${FLATPAK_DEST}/bin/                                    # Install script that will be ran automatically when user installs, after extra-data sources are downloaded
+        install -Dm644 WineGraphics.reg -t ${FLATPAK_DEST}/share/                             # Install Windows registry keys that will be applied to Wine prefix later
+        install -Dm744 App.sh -t ${FLATPAK_DEST}/bin/                                         # Install script that will act as the launch command when the Flatpak starts
+        install -Dm644 org.wine.App.svg -t ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/ # Install icon (NOTE: We install in scalable because the icon is an SVG, if it was a png we'd have to install in the appropriate resolution directory, for example 256x256)
+        install -Dm644 org.wine.App.desktop -t ${FLATPAK_DEST}/share/applications/            # Install desktop file that will be exported for desktop environments to use in their App menus
+        install -Dm644 org.wine.App.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo            # Install metainfo
 

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=App
+GenericName=App
+Comment=A Flatpak test app that uses a Wine Sdk/Platform
+Exec=App.sh
+Categories=Development;
+Icon=org.wine.App
+Keywords=Wine;App;
