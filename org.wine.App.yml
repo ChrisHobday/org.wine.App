@@ -2,7 +2,7 @@ id: org.wine.App
 # branch: testing                    # Set branch for testing purposes (Default branch is master)
 sdk: org.wine.Sdk
 runtime: org.wine.Platform
-runtime-version: '10.7'
+runtime-version: '10.9'
 # rename-desktop-file: App.desktop # Not needed because desktop file is already named com.wine.App
 # rename-icon: App                 # Not needed because icons are already named com.wine.App
 command: App.sh
@@ -101,15 +101,25 @@ modules:
         commands:
           - |
             # NOTE: ${FLATPAK_DEST} is not available here because this is ran after the Flatpak is built, while the user is installing
-            # wrestool -x --output=WineTest.ico -t14 winetest.exe # Extract ico from exe (Uses Icoutils module from org.wine.Sdk)
-            # magick WineTest.ico WineTest.png                    # Convert ico to png (Uses ImageMagick module from org.wine.Sdk) (This can extract 1 or many pngs with possibly different icons and not always labeled in order of resolution, therefore it takes some trail and error to find out which resolution icon is named what)
-            # magick WineTest.ico WineTest.svg                    # Convert ico to svg TODO: Figure out why this doesn't work <- Appears to be missing potrace delegate
+            wrestool -x --output=WineTest.ico -t14 winetest.exe # Extract ico from exe (Uses Icoutils module from org.wine.Sdk)
+            magick WineTest.ico WineTest.png                    # Convert ico to png (Uses ImageMagick module from org.wine.Sdk) (This can extract 1 or many pngs with possibly different icons and not always labeled in order of resolution, therefore it takes some trial and error to find out which resolution icon is named what)
+            magick WineTest.ico WineTest.svg                    # Convert ico to svg (Uses ImageMagick + potrace module from org.wine.Sdk) TODO: Find a way to convert to SVG without loosing color
 
-            # Resize WineTest icon to standard Linux icon sizes (Uses Image Magick binary from parent)
-            # magick WineTest.png -resize 128x128 WineTest128x128.png # Resize png to 128x128
+            # Resize WineTest icon to missing standard Linux icon sizes (Uses Image Magick binary from parent)
+            magick WineTest-0.png -resize 128x128 WineTest128x128.png
+            magick WineTest-0.png -resize 64x64 WineTest64x64.png
+            magick WineTest-0.png -resize 24x24 WineTest24x24.png
+            magick WineTest-0.png -resize 16x16 WineTest16x16.png
 
             # Install WineTest icons to appropriate directories
-            # install -Dm644 WineTest128x128.png ./export/share/icons/hicolor/128x128/apps/org.wine.App.png
+            install -Dm644 WineTest-0.png ./export/share/icons/hicolor/256x256/apps/org.wine.App.png
+            install -Dm644 WineTest128x128.png ./export/share/icons/hicolor/128x128/apps/org.wine.App.png
+            install -Dm644 WineTest64x64.png ./export/share/icons/hicolor/64x64/apps/org.wine.App.png
+            install -Dm644 WineTest-3.png ./export/share/icons/hicolor/48x48/apps/org.wine.App.png
+            install -Dm644 WineTest-2.png ./export/share/icons/hicolor/32x32/apps/org.wine.App.png
+            install -Dm644 WineTest24x24.png ./export/share/icons/hicolor/24x24/apps/org.wine.App.png
+            install -Dm644 WineTest16x16.png ./export/share/icons/hicolor/16x16/apps/org.wine.App.png
+            install -Dm644 WineTest.svg ./export/share/icons/hicolor/scalable/apps/org.wine.App.svg
 
       # Windows registry file that can be used to set needed registry keys of a Wine prefix
       - type: file
