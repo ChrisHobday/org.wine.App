@@ -80,12 +80,12 @@ modules:
       #   url: https://gitlab.winehq.org/wine/wine/-/jobs/161893/artifacts/raw/winetest64.exe
       #   sha256: f7eb761d69a294ec4f9f8bf1142731a9a189a638cf047f822846effd9754ba1b            # Hash that is used to confirm the correct file was downloaded
 
-      # NOTE: These executables are downloaded when the user installs this Flatpak, and are not included in the Flatpak when it is built. This is necessary to avoid redistributing copyrighted materials or very large files
+      # NOTE: These files are downloaded when the user installs this Flatpak, and are not included in the Flatpak when it is built. This is necessary to avoid redistributing copyrighted materials or very large files
       # Executable that tests the 32bit capabilities of the installed Wine (org.wine.Sdk) (Downloaded to /app/extra when user is installing because of extra-data)
       - type: extra-data
         url: https://gitlab.winehq.org/wine/wine/-/jobs/161893/artifacts/raw/winetest.exe
         sha256: 7955d7e783806063fb4c263dc7a1394236141980f7c96a3110baa24b12f541f4          # Hash that is used to confirm the correct file was downloaded
-        size: 71634800                                                                    # Size of executable (Found with "wc --bytes < winetest.exe")
+        size: 71634800                                                                    # Size of executable (Found with "wc --bytes < filename")
         filename: winetest.exe
 
       # Executable that tests the 64bit capabilities of the installed Wine (org.wine.Sdk) (Downloaded to /app/extra when user is installing because of extra-data)
@@ -105,13 +105,13 @@ modules:
             magick WineTest.ico WineTest.png                    # Convert ico to png (Uses ImageMagick module from org.wine.Sdk) (This can extract 1 or many pngs with possibly different icons and not always labeled in order of resolution, therefore it takes some trial and error to find out which resolution icon is named what)
             magick WineTest.ico WineTest.svg                    # Convert ico to svg (Uses ImageMagick + potrace module from org.wine.Sdk) TODO: Find a way to convert to SVG without loosing color
 
-            # Resize WineTest icon to missing standard Linux icon sizes (Uses Image Magick binary from parent)
+            # Resize icon to missing standard Linux icon sizes (Uses ImageMagick module from org.wine.Sdk)
             magick WineTest-0.png -resize 128x128 WineTest128x128.png
             magick WineTest-0.png -resize 64x64 WineTest64x64.png
             magick WineTest-0.png -resize 24x24 WineTest24x24.png
             magick WineTest-0.png -resize 16x16 WineTest16x16.png
 
-            # Install WineTest icons to appropriate directories
+            # Install icons to appropriate directories
             install -Dm644 WineTest-0.png ./export/share/icons/hicolor/256x256/apps/org.wine.App.png
             install -Dm644 WineTest128x128.png ./export/share/icons/hicolor/128x128/apps/org.wine.App.png
             install -Dm644 WineTest64x64.png ./export/share/icons/hicolor/64x64/apps/org.wine.App.png
@@ -145,14 +145,14 @@ modules:
       - |
         # NOTE: -Dm744 installs with execute permission, while -Dm644 does not
         # NOTE: ${FLATPAK_DEST} maps to /app here, because this is an app
-        # install -Dm744 winetest.exe -t ${FLATPAK_DEST}/bin                                    # Install winetest.exe
-        # install -Dm744 winetest64.exe -t ${FLATPAK_DEST}/bin                                  # Install winetest64.exe
-        ln -s ${FLATPAK_DEST}/extra/winetest.exe ${FLATPAK_DEST}/bin/winetest.exe             # Symlink to winetest.exe that will be downloaded with extra-data when user installs
-        ln -s ${FLATPAK_DEST}/extra/winetest64.exe ${FLATPAK_DEST}/bin/winetest64.exe         # Symlink to winetest64.exe that will be downloaded with extra-data when user installs
+        # install -Dm744 winetest.exe -t ${FLATPAK_DEST}/bin                                    # Install executable
+        # install -Dm744 winetest64.exe -t ${FLATPAK_DEST}/bin                                  # Install executable
+        ln -s ${FLATPAK_DEST}/extra/winetest.exe ${FLATPAK_DEST}/bin/winetest.exe             # Symlink to executable that will be downloaded with extra-data when user installs
+        ln -s ${FLATPAK_DEST}/extra/winetest64.exe ${FLATPAK_DEST}/bin/winetest64.exe         # Symlink to executable that will be downloaded with extra-data when user installs
         install -Dm744 apply_extra -t ${FLATPAK_DEST}/bin/                                    # Install script that will be ran automatically when user installs, after extra-data sources are downloaded
         install -Dm644 WineGraphics.reg -t ${FLATPAK_DEST}/share/                             # Install Windows registry keys that will be applied to Wine prefix later
         install -Dm744 App.sh -t ${FLATPAK_DEST}/bin/                                         # Install script that will act as the launch command when the Flatpak starts
-        install -Dm644 org.wine.App.svg -t ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/ # Install icon (NOTE: We install in scalable because the icon is an SVG, if it was a png we'd have to install in the appropriate resolution directory, for example 256x256)
+        install -Dm644 org.wine.App.svg -t ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/ # Install icon (NOTE: We install in scalable because the icon is an SVG, if it was a PNG we'd have to install in the appropriate resolution directory, for example 256x256)
         install -Dm644 org.wine.App.desktop -t ${FLATPAK_DEST}/share/applications/            # Install desktop file that will be exported for desktop environments to use in their App menus
         install -Dm644 org.wine.App.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo            # Install metainfo
 
